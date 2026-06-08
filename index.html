@@ -66,6 +66,16 @@
       font-size: 0.8rem;
     }
     .copy-btn:hover { background: #eee; }
+    .create-form-section { margin-top: 1.5rem; }
+    .create-form-btn {
+      background: #27ae60; color: #fff; border: none;
+      padding: 0.6rem 1.6rem; border-radius: 4px; font-size: 1rem; cursor: pointer;
+    }
+    .create-form-btn:disabled { background: #aaa; cursor: default; }
+    .form-links { margin-top: 0.8rem; display: none; }
+    .form-links a { display: block; margin-bottom: 0.4rem; color: #2980b9; word-break: break-all; }
+    #create-status { margin-top: 0.5rem; font-size: 0.9rem; min-height: 1.2em; }
+    #create-status.error { color: #c0392b; }
   </style>
 </head>
 <body>
@@ -90,6 +100,14 @@
     <h2>識別結果（JSON）</h2>
     <pre id="json-output"></pre>
     <button class="copy-btn" onclick="copyJson()">複製 JSON</button>
+    <div class="create-form-section">
+      <button class="create-form-btn" id="create-btn" onclick="createGoogleForm()">建立 Google 表單</button>
+      <div id="create-status"></div>
+      <div class="form-links" id="form-links">
+        <a id="edit-link" href="#" target="_blank">✏️ 編輯表單（Google Forms 後台）</a>
+        <a id="respond-link" href="#" target="_blank">📋 填寫連結（可分享給受訪者）</a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -102,6 +120,7 @@
   const jsonOutput = document.getElementById("json-output");
   const submitBtn = document.getElementById("submit-btn");
   const truncateWarning = document.getElementById("truncate-warning");
+  let lastFields = [];
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -112,6 +131,7 @@
     statusEl.className = "";
     statusEl.textContent = "正在上傳並分析，請稍候…";
     resultSection.style.display = "none";
+    lastFields = [];
 
     const data = new FormData();
     data.append("file", file);
@@ -128,7 +148,10 @@
         statusEl.textContent = `分析完成，共識別 ${json.fields.length} 個欄位。`;
         truncateWarning.style.display = json.truncated ? "block" : "none";
         jsonOutput.textContent = JSON.stringify(json.fields, null, 2);
+        lastFields = json.fields;
         resultSection.style.display = "block";
+        document.getElementById("create-status").textContent = "";
+        document.getElementById("form-links").style.display = "none";
       }
     } catch (err) {
       statusEl.className = "error";
@@ -141,6 +164,43 @@
   function copyJson() {
     navigator.clipboard.writeText(jsonOutput.textContent)
       .then(() => alert("已複製到剪貼簿"));
+  }
+
+  async function createGoogleForm() {
+    if (!lastFields.length) {
+      document.getElementById("create-status").className = "error";
+      document.getElementById("create-status").textContent = "請先分析文件後再建立表單。";
+      return;
+    }
+    const btn = document.getElementById("create-btn");
+    const createStatusEl = document.getElementById("create-status");
+    const linksEl = document.getElementById("form-links");
+    btn.disabled = true;
+    createStatusEl.className = "";
+    createStatusEl.textContent = "正在建立 Google 表單，請稍候…";
+    linksEl.style.display = "none";
+    try {
+      const resp = await fetch(`${API_BASE}/create-form`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fields: lastFields, title: "自動產生表單" }),
+      });
+      const json = await resp.json();
+      if (json.error) {
+        createStatusEl.className = "error";
+        createStatusEl.textContent = "建立失敗：" + json.error;
+      } else {
+        createStatusEl.textContent = "表單建立成功！";
+        document.getElementById("edit-link").href = json.edit_url;
+        document.getElementById("respond-link").href = json.respond_url;
+        linksEl.style.display = "block";
+      }
+    } catch (err) {
+      createStatusEl.className = "error";
+      createStatusEl.textContent = "連線失敗：" + err.message;
+    } finally {
+      btn.disabled = false;
+    }
   }
 </script>
 </body>

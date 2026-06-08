@@ -11,6 +11,7 @@ load_dotenv()
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from docx_extractor import extract_text
 from gemini_analyzer import analyze_form
+from forms_creator import create_form
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB 上限
@@ -41,6 +42,18 @@ def analyze():
         return jsonify(result)
     finally:
         os.unlink(tmp_path)
+
+
+@app.route("/create-form", methods=["POST"])
+def create_form_endpoint():
+    data = request.get_json(silent=True) or {}
+    fields = data.get("fields", [])
+    title = data.get("title", "自動產生表單")
+    if not fields:
+        return jsonify({"error": "未提供欄位資料"}), 400
+    result = create_form(title, fields)
+    status = 500 if result.get("error") else 200
+    return jsonify(result), status
 
 
 if __name__ == "__main__":
