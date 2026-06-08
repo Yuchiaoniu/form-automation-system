@@ -3,33 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>表單自動化系統 — 文件分析</title>
+  <title>表單自動化系統</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #222; padding: 2rem; }
     .container { max-width: 800px; margin: 0 auto; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    p.sub { color: #666; margin-bottom: 2rem; font-size: 0.9rem; }
+
+    /* 登入頁 */
+    .login-box {
+      background: #fff; border-radius: 8px; padding: 2.5rem;
+      max-width: 360px; margin: 4rem auto; box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+    .login-box h1 { font-size: 1.3rem; margin-bottom: 1.5rem; text-align: center; }
+    .login-box input {
+      width: 100%; padding: 0.6rem 0.8rem; margin-bottom: 1rem;
+      border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;
+    }
+    .login-box button {
+      width: 100%; background: #4a90d9; color: #fff; border: none;
+      padding: 0.7rem; border-radius: 4px; font-size: 1rem; cursor: pointer;
+    }
+    .login-box button:hover { background: #357abd; }
+    #login-error { color: #c0392b; font-size: 0.875rem; margin-top: 0.5rem; min-height: 1.2em; }
+
+    /* 主頁面 */
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .topbar h1 { font-size: 1.4rem; }
+    .logout-btn { background: transparent; border: 1px solid #ccc; padding: 0.3rem 0.9rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
+    .logout-btn:hover { background: #fee; border-color: #c0392b; color: #c0392b; }
 
     .upload-box {
-      background: #fff;
-      border: 2px dashed #ccc;
-      border-radius: 8px;
-      padding: 2rem;
-      text-align: center;
-      margin-bottom: 1.5rem;
-      transition: border-color 0.2s;
+      background: #fff; border: 2px dashed #ccc; border-radius: 8px;
+      padding: 2rem; text-align: center; margin-bottom: 1.5rem;
     }
-    .upload-box:hover { border-color: #4a90d9; }
     .upload-box input[type=file] { margin: 1rem 0; display: block; width: 100%; }
     .upload-box button {
-      background: #4a90d9;
-      color: #fff;
-      border: none;
-      padding: 0.6rem 1.8rem;
-      border-radius: 4px;
-      font-size: 1rem;
-      cursor: pointer;
+      background: #4a90d9; color: #fff; border: none;
+      padding: 0.6rem 1.8rem; border-radius: 4px; font-size: 1rem; cursor: pointer;
     }
     .upload-box button:disabled { background: #aaa; cursor: default; }
 
@@ -37,165 +47,160 @@
     #status.error { color: #c0392b; }
     #status.ok { color: #27ae60; }
 
+    .form-result { background: #eafaf1; border-left: 4px solid #27ae60; padding: 0.8rem 1rem; border-radius: 4px; margin-bottom: 1.5rem; display: none; }
+    .form-result a { display: block; margin-top: 0.3rem; color: #2980b9; word-break: break-all; }
+
+    .warning { background: #fff3cd; border-left: 4px solid #f39c12; padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 2px; font-size: 0.875rem; }
+
     /* 歷史清單 */
-    .history-section { margin-bottom: 2rem; }
-    .history-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 0.6rem;
-    }
-    .history-header h2 { font-size: 1rem; }
-    .clear-btn {
-      background: transparent; border: 1px solid #ccc;
-      padding: 0.25rem 0.7rem; border-radius: 4px;
-      font-size: 0.8rem; cursor: pointer; color: #666;
-    }
-    .clear-btn:hover { background: #fee; border-color: #c0392b; color: #c0392b; }
+    .history-section { margin-top: 2rem; }
+    .history-section h2 { font-size: 1rem; margin-bottom: 0.6rem; }
     .history-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; background: #fff; border-radius: 6px; overflow: hidden; }
     .history-table th { background: #f0f0f0; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; }
     .history-table td { padding: 0.5rem 0.75rem; border-top: 1px solid #eee; word-break: break-all; }
     .history-table a { color: #2980b9; text-decoration: none; }
     .history-table a:hover { text-decoration: underline; }
-
-    .result-section { display: none; }
-    .result-section h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
-
-    .warning { background: #fff3cd; border-left: 4px solid #f39c12; padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 2px; font-size: 0.875rem; }
-
-    #json-output {
-      background: #1e1e1e;
-      color: #d4d4d4;
-      padding: 1.2rem;
-      border-radius: 6px;
-      overflow-x: auto;
-      font-size: 0.85rem;
-      line-height: 1.6;
-      white-space: pre-wrap;
-      word-break: break-all;
-      max-height: 600px;
-      overflow-y: auto;
-    }
-
-    .copy-btn {
-      margin-top: 0.5rem;
-      background: transparent;
-      border: 1px solid #aaa;
-      padding: 0.3rem 0.9rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.8rem;
-    }
-    .copy-btn:hover { background: #eee; }
-    .create-form-section { margin-top: 1.5rem; }
-    .create-form-btn {
-      background: #27ae60; color: #fff; border: none;
-      padding: 0.6rem 1.6rem; border-radius: 4px; font-size: 1rem; cursor: pointer;
-    }
-    .create-form-btn:disabled { background: #aaa; cursor: default; }
-    .form-links { margin-top: 0.8rem; display: none; }
-    .form-links a { display: block; margin-bottom: 0.4rem; color: #2980b9; word-break: break-all; }
-    #create-status { margin-top: 0.5rem; font-size: 0.9rem; min-height: 1.2em; }
-    #create-status.error { color: #c0392b; }
+    .no-records { color: #999; font-size: 0.875rem; padding: 0.5rem 0; }
   </style>
 </head>
 <body>
-<div class="container">
-  <h1>表單自動化系統</h1>
-  <p class="sub">上傳 .docx 表單文件，系統將透過 Gemini AI 分析欄位結構並輸出 JSON。</p>
 
-  <div class="upload-box">
-    <form id="upload-form">
-      <label for="file-input">選擇 Word 文件（.docx）</label>
-      <input type="file" id="file-input" accept=".docx" required>
-      <button type="submit" id="submit-btn">開始分析</button>
-    </form>
+<!-- 登入頁 -->
+<div id="login-page">
+  <div class="login-box">
+    <h1>表單自動化系統</h1>
+    <input type="text" id="username" placeholder="帳號" autocomplete="username">
+    <input type="password" id="password" placeholder="密碼" autocomplete="current-password">
+    <button onclick="doLogin()">登入</button>
+    <div id="login-error"></div>
   </div>
+</div>
 
-  <div id="status"></div>
+<!-- 主頁面 -->
+<div id="main-page" style="display:none">
+  <div class="container">
+    <div class="topbar">
+      <h1>表單自動化系統</h1>
+      <button class="logout-btn" onclick="doLogout()">登出（<span id="username-display"></span>）</button>
+    </div>
 
-  <!-- 歷史清單 -->
-  <div class="history-section" id="history-section" style="display:none">
-    <div class="history-header">
+    <div class="upload-box">
+      <form id="upload-form">
+        <label for="file-input">選擇 Word 文件（.docx）</label>
+        <input type="file" id="file-input" accept=".docx" required>
+        <button type="submit" id="submit-btn">開始分析並建立表單</button>
+      </form>
+    </div>
+
+    <div id="status"></div>
+    <div class="warning" id="truncate-warning" style="display:none">⚠️ 文件內容過長，已截斷，分析結果可能不完整。</div>
+
+    <div class="form-result" id="form-result">
+      <strong>表單建立成功！</strong>
+      <a id="edit-link" href="#" target="_blank">✏️ 編輯表單（Google Forms 後台）</a>
+      <a id="respond-link" href="#" target="_blank">📋 填寫連結（可分享給受訪者）</a>
+    </div>
+
+    <div class="history-section">
       <h2>已建立表單</h2>
-      <button class="clear-btn" onclick="clearHistory()">清除所有記錄</button>
-    </div>
-    <table class="history-table">
-      <thead>
-        <tr>
-          <th>檔案名稱</th>
-          <th>編輯連結</th>
-          <th>填寫連結</th>
-          <th>建立時間</th>
-        </tr>
-      </thead>
-      <tbody id="history-body"></tbody>
-    </table>
-  </div>
-
-  <div class="result-section" id="result-section">
-    <div class="warning" id="truncate-warning" style="display:none">
-      ⚠️ 文件內容過長，已截斷至前 8000 字元，分析結果可能不完整。
-    </div>
-    <h2>識別結果（JSON）</h2>
-    <pre id="json-output"></pre>
-    <button class="copy-btn" onclick="copyJson()">複製 JSON</button>
-    <div class="create-form-section">
-      <button class="create-form-btn" id="create-btn" onclick="createGoogleForm()">建立 Google 表單</button>
-      <div id="create-status"></div>
-      <div class="form-links" id="form-links">
-        <a id="edit-link" href="#" target="_blank">✏️ 編輯表單（Google Forms 後台）</a>
-        <a id="respond-link" href="#" target="_blank">📋 填寫連結（可分享給受訪者）</a>
-      </div>
+      <div id="history-container"></div>
     </div>
   </div>
 </div>
 
 <script>
-  const API_BASE = "https://forest-carbon.duckdns.org/forms";
-  const HISTORY_KEY = "form_history";
+  const API = "https://forest-carbon.duckdns.org/forms";
 
-  const form = document.getElementById("upload-form");
-  const statusEl = document.getElementById("status");
-  const resultSection = document.getElementById("result-section");
-  const jsonOutput = document.getElementById("json-output");
-  const submitBtn = document.getElementById("submit-btn");
-  const truncateWarning = document.getElementById("truncate-warning");
-  let lastFields = [];
-  let lastFileName = "";
+  async function apiFetch(path, opts = {}) {
+    return fetch(API + path, { credentials: "include", ...opts });
+  }
 
-  // 頁面載入時渲染歷史
-  renderHistory();
+  async function doLogin() {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    const errEl = document.getElementById("login-error");
+    errEl.textContent = "";
+    const resp = await apiFetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const json = await resp.json();
+    if (!resp.ok) { errEl.textContent = json.error; return; }
+    showMain(json.username);
+    loadHistory();
+  }
 
-  form.addEventListener("submit", async (e) => {
+  async function doLogout() {
+    await apiFetch("/logout", { method: "POST" });
+    document.getElementById("main-page").style.display = "none";
+    document.getElementById("login-page").style.display = "block";
+    document.getElementById("password").value = "";
+  }
+
+  function showMain(username) {
+    document.getElementById("login-page").style.display = "none";
+    document.getElementById("main-page").style.display = "block";
+    document.getElementById("username-display").textContent = username;
+  }
+
+  async function loadHistory() {
+    const resp = await apiFetch("/history");
+    if (!resp.ok) return;
+    const { records } = await resp.json();
+    renderHistory(records);
+  }
+
+  function renderHistory(records) {
+    const container = document.getElementById("history-container");
+    if (!records.length) {
+      container.innerHTML = '<p class="no-records">尚無記錄</p>';
+      return;
+    }
+    container.innerHTML = `<table class="history-table">
+      <thead><tr><th>檔案名稱</th><th>編輯連結</th><th>填寫連結</th><th>建立時間</th></tr></thead>
+      <tbody>${records.map(r => `<tr>
+        <td>${esc(r.file_name)}</td>
+        <td><a href="${esc(r.edit_url)}" target="_blank">✏️ 編輯</a></td>
+        <td><a href="${esc(r.respond_url)}" target="_blank">📋 填寫</a></td>
+        <td>${esc(r.created_at)}</td>
+      </tr>`).join("")}</tbody>
+    </table>`;
+  }
+
+  document.getElementById("upload-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const file = document.getElementById("file-input").files[0];
     if (!file) return;
-
-    lastFileName = file.name.replace(/\.docx$/i, "");
+    const submitBtn = document.getElementById("submit-btn");
+    const statusEl = document.getElementById("status");
     submitBtn.disabled = true;
     statusEl.className = "";
-    statusEl.textContent = "正在上傳並分析，請稍候…";
-    resultSection.style.display = "none";
-    lastFields = [];
+    statusEl.textContent = "正在上傳並分析（Gemini），完成後自動建立 Google 表單，請稍候…";
+    document.getElementById("form-result").style.display = "none";
+    document.getElementById("truncate-warning").style.display = "none";
 
     const data = new FormData();
     data.append("file", file);
-
     try {
-      const resp = await fetch(`${API_BASE}/analyze`, { method: "POST", body: data });
+      const resp = await apiFetch("/analyze", { method: "POST", body: data });
       const json = await resp.json();
-
       if (json.error) {
         statusEl.className = "error";
         statusEl.textContent = "錯誤：" + json.error;
       } else {
-        statusEl.className = "ok";
-        statusEl.textContent = `分析完成，共識別 ${json.fields.length} 個欄位。`;
-        truncateWarning.style.display = json.truncated ? "block" : "none";
-        jsonOutput.textContent = JSON.stringify(json.fields, null, 2);
-        lastFields = json.fields;
-        resultSection.style.display = "block";
-        document.getElementById("create-status").textContent = "";
-        document.getElementById("form-links").style.display = "none";
+        if (json.form_error) {
+          statusEl.className = "error";
+          statusEl.textContent = `分析完成（${json.fields.length} 個欄位），但表單建立失敗：${json.form_error}`;
+        } else {
+          statusEl.className = "ok";
+          statusEl.textContent = `完成！共識別 ${json.fields.length} 個欄位，Google 表單已建立。`;
+          document.getElementById("edit-link").href = json.edit_url;
+          document.getElementById("respond-link").href = json.respond_url;
+          document.getElementById("form-result").style.display = "block";
+          document.getElementById("truncate-warning").style.display = json.truncated ? "block" : "none";
+          loadHistory();
+        }
       }
     } catch (err) {
       statusEl.className = "error";
@@ -205,89 +210,13 @@
     }
   });
 
-  function copyJson() {
-    navigator.clipboard.writeText(jsonOutput.textContent)
-      .then(() => alert("已複製到剪貼簿"));
-  }
+  // 密碼欄位 Enter 觸發登入
+  document.getElementById("password").addEventListener("keydown", e => {
+    if (e.key === "Enter") doLogin();
+  });
 
-  async function createGoogleForm() {
-    if (!lastFields.length) {
-      document.getElementById("create-status").className = "error";
-      document.getElementById("create-status").textContent = "請先分析文件後再建立表單。";
-      return;
-    }
-    const btn = document.getElementById("create-btn");
-    const createStatusEl = document.getElementById("create-status");
-    const linksEl = document.getElementById("form-links");
-    btn.disabled = true;
-    createStatusEl.className = "";
-    createStatusEl.textContent = "正在建立 Google 表單，請稍候…";
-    linksEl.style.display = "none";
-    try {
-      const resp = await fetch(`${API_BASE}/create-form`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: lastFields, title: lastFileName || "自動產生表單" }),
-      });
-      const json = await resp.json();
-      if (json.error) {
-        createStatusEl.className = "error";
-        createStatusEl.textContent = "建立失敗：" + json.error;
-      } else {
-        createStatusEl.textContent = "表單建立成功！";
-        document.getElementById("edit-link").href = json.edit_url;
-        document.getElementById("respond-link").href = json.respond_url;
-        linksEl.style.display = "block";
-        saveHistory(lastFileName, json.edit_url, json.respond_url);
-      }
-    } catch (err) {
-      createStatusEl.className = "error";
-      createStatusEl.textContent = "連線失敗：" + err.message;
-    } finally {
-      btn.disabled = false;
-    }
-  }
-
-  function saveHistory(fileName, editUrl, respondUrl) {
-    const history = getHistory();
-    history.unshift({
-      fileName,
-      editUrl,
-      respondUrl,
-      createdAt: new Date().toLocaleString("zh-TW")
-    });
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    renderHistory();
-  }
-
-  function getHistory() {
-    try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
-    catch { return []; }
-  }
-
-  function renderHistory() {
-    const history = getHistory();
-    const section = document.getElementById("history-section");
-    const tbody = document.getElementById("history-body");
-    if (!history.length) { section.style.display = "none"; return; }
-    section.style.display = "block";
-    tbody.innerHTML = history.map(r => `
-      <tr>
-        <td>${escHtml(r.fileName)}</td>
-        <td><a href="${escHtml(r.editUrl)}" target="_blank">✏️ 編輯</a></td>
-        <td><a href="${escHtml(r.respondUrl)}" target="_blank">📋 填寫</a></td>
-        <td>${escHtml(r.createdAt)}</td>
-      </tr>`).join("");
-  }
-
-  function clearHistory() {
-    if (!confirm("確定要清除所有表單記錄嗎？")) return;
-    localStorage.removeItem(HISTORY_KEY);
-    renderHistory();
-  }
-
-  function escHtml(str) {
-    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  function esc(str) {
+    return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 </script>
 </body>
