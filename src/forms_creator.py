@@ -1,7 +1,6 @@
-import os
 import logging
 
-from google.oauth2 import service_account
+import google.auth
 from googleapiclient.discovery import build
 
 SCOPES = [
@@ -23,13 +22,7 @@ TYPE_MAP = {
 
 
 def _build_services():
-    key_path = os.environ.get(
-        "GOOGLE_APPLICATION_CREDENTIALS",
-        os.path.join(os.path.dirname(__file__), "..", "service-account.json"),
-    )
-    if not os.path.exists(key_path):
-        raise FileNotFoundError(f"Service account key not found: {key_path}")
-    creds = service_account.Credentials.from_service_account_file(key_path, scopes=SCOPES)
+    creds, _ = google.auth.default(scopes=SCOPES)
     forms_svc = build("forms", "v1", credentials=creds, cache_discovery=False)
     drive_svc = build("drive", "v3", credentials=creds, cache_discovery=False)
     return forms_svc, drive_svc
@@ -69,10 +62,6 @@ def _field_to_item(field, index):
 
 
 def create_form(title: str, fields: list) -> dict:
-    """
-    建立 Google Form，加入所有欄位，並分享給指定帳號。
-    回傳 { form_id, edit_url, respond_url, error }
-    """
     try:
         forms_svc, drive_svc = _build_services()
     except Exception as e:
@@ -87,10 +76,10 @@ def create_form(title: str, fields: list) -> dict:
         return {"form_id": None, "edit_url": None, "respond_url": None, "error": f"建立表單失敗：{e}"}
 
     if fields:
-        requests = [_field_to_item(f, i) for i, f in enumerate(fields)]
+        requests_body = [_field_to_item(f, i) for i, f in enumerate(fields)]
         try:
             forms_svc.forms().batchUpdate(
-                formId=form_id, body={"requests": requests}
+                formId=form_id, body={"requests": requests_body}
             ).execute()
         except Exception as e:
             logging.warning("batchUpdate 部分失敗：%s", e)

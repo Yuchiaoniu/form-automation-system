@@ -1,5 +1,7 @@
 .env
 service-account.json
+user-credentials.json
+oauth-client-credentials.json
 __pycache__/
 *.pyc
 *.pyo
