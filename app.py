@@ -53,6 +53,13 @@ def logout():
     return jsonify({"ok": True})
 
 
+@app.route("/me", methods=["GET"])
+def me():
+    if not _user_id():
+        return jsonify({"error": "未登入"}), 401
+    return jsonify({"username": session.get("username")})
+
+
 @app.route("/history", methods=["GET"])
 def history():
     if not _user_id():

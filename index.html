@@ -215,6 +215,16 @@
     if (e.key === "Enter") doLogin();
   });
 
+  // 頁面載入時檢查 session
+  (async () => {
+    const resp = await apiFetch("/me").catch(() => null);
+    if (resp && resp.ok) {
+      const { username } = await resp.json();
+      showMain(username);
+      loadHistory();
+    }
+  })();
+
   function esc(str) {
     return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
