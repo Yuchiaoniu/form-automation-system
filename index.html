@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #222; padding: 2rem; }
-    .container { max-width: 800px; margin: 0 auto; }
+    .container { max-width: 860px; margin: 0 auto; }
 
     /* 登入頁 */
     .login-box {
@@ -32,30 +32,42 @@
     .logout-btn { background: transparent; border: 1px solid #ccc; padding: 0.3rem 0.9rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
     .logout-btn:hover { background: #fee; border-color: #c0392b; color: #c0392b; }
 
+    /* 雙欄上傳區 */
+    .upload-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    @media (max-width: 600px) { .upload-row { grid-template-columns: 1fr; } }
+
     .upload-box {
       background: #fff; border: 2px dashed #ccc; border-radius: 8px;
-      padding: 2rem; text-align: center; margin-bottom: 1.5rem;
+      padding: 1.5rem; text-align: center;
     }
-    .upload-box input[type=file] { margin: 1rem 0; display: block; width: 100%; }
+    .upload-box h3 { font-size: 0.95rem; margin-bottom: 0.5rem; color: #444; }
+    .upload-box p { font-size: 0.8rem; color: #888; margin-bottom: 0.75rem; }
+    .upload-box input[type=file] { display: block; width: 100%; margin-bottom: 0.75rem; font-size: 0.875rem; }
     .upload-box button {
       background: #4a90d9; color: #fff; border: none;
-      padding: 0.6rem 1.8rem; border-radius: 4px; font-size: 1rem; cursor: pointer;
+      padding: 0.5rem 1.4rem; border-radius: 4px; font-size: 0.875rem; cursor: pointer; width: 100%;
     }
     .upload-box button:disabled { background: #aaa; cursor: default; }
+    .upload-box.img-box { border-color: #b0c4de; }
+    .upload-box.img-box button { background: #5b8dbe; }
+    .upload-box.img-box button:hover:not(:disabled) { background: #4a7aaa; }
+    .upload-box button:hover:not(:disabled) { background: #357abd; }
 
-    #status { margin-bottom: 1rem; font-size: 0.9rem; color: #555; min-height: 1.2em; }
-    #status.error { color: #c0392b; }
-    #status.ok { color: #27ae60; }
+    .status-area { margin-bottom: 1rem; font-size: 0.9rem; color: #555; min-height: 1.2em; }
+    .status-area.error { color: #c0392b; }
+    .status-area.ok { color: #27ae60; }
 
-    .form-result { background: #eafaf1; border-left: 4px solid #27ae60; padding: 0.8rem 1rem; border-radius: 4px; margin-bottom: 1.5rem; display: none; }
+    .form-result { background: #eafaf1; border-left: 4px solid #27ae60; padding: 0.8rem 1rem; border-radius: 4px; margin-bottom: 0.75rem; display: none; }
     .form-result a { display: block; margin-top: 0.3rem; color: #2980b9; word-break: break-all; }
+    .doc-result { background: #e8f4fb; border-left: 4px solid #5b8dbe; padding: 0.8rem 1rem; border-radius: 4px; margin-bottom: 0.75rem; display: none; }
+    .doc-result a { display: block; margin-top: 0.3rem; color: #2980b9; word-break: break-all; }
 
     .warning { background: #fff3cd; border-left: 4px solid #f39c12; padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 2px; font-size: 0.875rem; }
 
     /* 歷史清單 */
     .history-section { margin-top: 2rem; }
-    .history-section h2 { font-size: 1rem; margin-bottom: 0.6rem; }
-    .history-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; background: #fff; border-radius: 6px; overflow: hidden; }
+    .history-section h2 { font-size: 1rem; margin-bottom: 0.6rem; color: #333; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; background: #fff; border-radius: 6px; overflow: hidden; margin-bottom: 1.5rem; }
     .history-table th { background: #f0f0f0; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; }
     .history-table td { padding: 0.5rem 0.75rem; border-top: 1px solid #eee; word-break: break-all; }
     .history-table a { color: #2980b9; text-decoration: none; }
@@ -84,26 +96,50 @@
       <button class="logout-btn" onclick="doLogout()">登出（<span id="username-display"></span>）</button>
     </div>
 
-    <div class="upload-box">
-      <form id="upload-form">
-        <label for="file-input">選擇 Word 文件（.docx）</label>
-        <input type="file" id="file-input" accept=".docx" required>
-        <button type="submit" id="submit-btn">開始分析並建立表單</button>
-      </form>
+    <div class="upload-row">
+      <!-- .docx → Google Forms -->
+      <div class="upload-box">
+        <h3>📄 Word 文件 → Google 表單</h3>
+        <p>上傳 .docx，自動建立 Google Forms</p>
+        <form id="docx-form">
+          <input type="file" id="docx-input" accept=".docx" required>
+          <button type="submit" id="docx-btn">分析並建立表單</button>
+        </form>
+      </div>
+
+      <!-- 圖片 → .docx -->
+      <div class="upload-box img-box">
+        <h3>🖼️ 表格照片 → Word 文件</h3>
+        <p>上傳 JPG/PNG，重建表格結構為 .docx</p>
+        <form id="img-form">
+          <input type="file" id="img-input" accept=".jpg,.jpeg,.png" required>
+          <button type="submit" id="img-btn">轉換為 .docx</button>
+        </form>
+      </div>
     </div>
 
-    <div id="status"></div>
+    <div id="docx-status" class="status-area"></div>
     <div class="warning" id="truncate-warning" style="display:none">⚠️ 文件內容過長，已截斷，分析結果可能不完整。</div>
-
     <div class="form-result" id="form-result">
       <strong>表單建立成功！</strong>
       <a id="edit-link" href="#" target="_blank">✏️ 編輯表單（Google Forms 後台）</a>
       <a id="respond-link" href="#" target="_blank">📋 填寫連結（可分享給受訪者）</a>
     </div>
 
+    <div id="img-status" class="status-area"></div>
+    <div class="doc-result" id="doc-result">
+      <strong>文件轉換成功！</strong>
+      <a id="download-link" href="#" target="_blank">⬇️ 下載 .docx 文件</a>
+    </div>
+
+    <!-- 歷史 -->
     <div class="history-section">
-      <h2>已建立表單</h2>
-      <div id="history-container"></div>
+      <h2>已建立 Google 表單</h2>
+      <div id="forms-history"></div>
+    </div>
+    <div class="history-section">
+      <h2>已轉換文件</h2>
+      <div id="docs-history"></div>
     </div>
   </div>
 </div>
@@ -147,17 +183,15 @@
   async function loadHistory() {
     const resp = await apiFetch("/history");
     if (!resp.ok) return;
-    const { records } = await resp.json();
-    renderHistory(records);
+    const { forms, docs } = await resp.json();
+    renderForms(forms || []);
+    renderDocs(docs || []);
   }
 
-  function renderHistory(records) {
-    const container = document.getElementById("history-container");
-    if (!records.length) {
-      container.innerHTML = '<p class="no-records">尚無記錄</p>';
-      return;
-    }
-    container.innerHTML = `<table class="history-table">
+  function renderForms(records) {
+    const el = document.getElementById("forms-history");
+    if (!records.length) { el.innerHTML = '<p class="no-records">尚無記錄</p>'; return; }
+    el.innerHTML = `<table class="history-table">
       <thead><tr><th>檔案名稱</th><th>編輯連結</th><th>填寫連結</th><th>建立時間</th></tr></thead>
       <tbody>${records.map(r => `<tr>
         <td>${esc(r.file_name)}</td>
@@ -168,14 +202,28 @@
     </table>`;
   }
 
-  document.getElementById("upload-form").addEventListener("submit", async (e) => {
+  function renderDocs(records) {
+    const el = document.getElementById("docs-history");
+    if (!records.length) { el.innerHTML = '<p class="no-records">尚無記錄</p>'; return; }
+    el.innerHTML = `<table class="history-table">
+      <thead><tr><th>原始檔名</th><th>下載</th><th>建立時間</th></tr></thead>
+      <tbody>${records.map(r => `<tr>
+        <td>${esc(r.original_filename)}</td>
+        <td><a href="${API}/download/${r.id}" target="_blank">⬇️ 下載 .docx</a></td>
+        <td>${esc(r.created_at)}</td>
+      </tr>`).join("")}</tbody>
+    </table>`;
+  }
+
+  // .docx → Google Forms 表單提交
+  document.getElementById("docx-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const file = document.getElementById("file-input").files[0];
+    const file = document.getElementById("docx-input").files[0];
     if (!file) return;
-    const submitBtn = document.getElementById("submit-btn");
-    const statusEl = document.getElementById("status");
-    submitBtn.disabled = true;
-    statusEl.className = "";
+    const btn = document.getElementById("docx-btn");
+    const statusEl = document.getElementById("docx-status");
+    btn.disabled = true;
+    statusEl.className = "status-area";
     statusEl.textContent = "正在上傳並分析（Gemini），完成後自動建立 Google 表單，請稍候…";
     document.getElementById("form-result").style.display = "none";
     document.getElementById("truncate-warning").style.display = "none";
@@ -186,27 +234,60 @@
       const resp = await apiFetch("/analyze", { method: "POST", body: data });
       const json = await resp.json();
       if (json.error) {
-        statusEl.className = "error";
+        statusEl.className = "status-area error";
         statusEl.textContent = "錯誤：" + json.error;
+      } else if (json.form_error) {
+        statusEl.className = "status-area error";
+        statusEl.textContent = `分析完成（${json.fields.length} 個欄位），但表單建立失敗：${json.form_error}`;
       } else {
-        if (json.form_error) {
-          statusEl.className = "error";
-          statusEl.textContent = `分析完成（${json.fields.length} 個欄位），但表單建立失敗：${json.form_error}`;
-        } else {
-          statusEl.className = "ok";
-          statusEl.textContent = `完成！共識別 ${json.fields.length} 個欄位，Google 表單已建立。`;
-          document.getElementById("edit-link").href = json.edit_url;
-          document.getElementById("respond-link").href = json.respond_url;
-          document.getElementById("form-result").style.display = "block";
-          document.getElementById("truncate-warning").style.display = json.truncated ? "block" : "none";
-          loadHistory();
-        }
+        statusEl.className = "status-area ok";
+        statusEl.textContent = `完成！共識別 ${json.fields.length} 個欄位，Google 表單已建立。`;
+        document.getElementById("edit-link").href = json.edit_url;
+        document.getElementById("respond-link").href = json.respond_url;
+        document.getElementById("form-result").style.display = "block";
+        document.getElementById("truncate-warning").style.display = json.truncated ? "block" : "none";
+        loadHistory();
       }
     } catch (err) {
-      statusEl.className = "error";
+      statusEl.className = "status-area error";
       statusEl.textContent = "連線失敗：" + err.message;
     } finally {
-      submitBtn.disabled = false;
+      btn.disabled = false;
+    }
+  });
+
+  // 圖片 → .docx 表單提交
+  document.getElementById("img-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const file = document.getElementById("img-input").files[0];
+    if (!file) return;
+    const btn = document.getElementById("img-btn");
+    const statusEl = document.getElementById("img-status");
+    btn.disabled = true;
+    statusEl.className = "status-area";
+    statusEl.textContent = "正在分析圖片並重建表格，請稍候…";
+    document.getElementById("doc-result").style.display = "none";
+
+    const data = new FormData();
+    data.append("file", file);
+    try {
+      const resp = await apiFetch("/convert-image", { method: "POST", body: data });
+      const json = await resp.json();
+      if (json.error) {
+        statusEl.className = "status-area error";
+        statusEl.textContent = "錯誤：" + json.error;
+      } else {
+        statusEl.className = "status-area ok";
+        statusEl.textContent = `轉換完成！`;
+        document.getElementById("download-link").href = API + "/download/" + json.record_id;
+        document.getElementById("doc-result").style.display = "block";
+        loadHistory();
+      }
+    } catch (err) {
+      statusEl.className = "status-area error";
+      statusEl.textContent = "連線失敗：" + err.message;
+    } finally {
+      btn.disabled = false;
     }
   });
 
@@ -214,6 +295,10 @@
   document.getElementById("password").addEventListener("keydown", e => {
     if (e.key === "Enter") doLogin();
   });
+
+  function esc(str) {
+    return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
 
   // 頁面載入時檢查 session
   (async () => {
@@ -224,10 +309,6 @@
       loadHistory();
     }
   })();
-
-  function esc(str) {
-    return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-  }
 </script>
 </body>
 </html>

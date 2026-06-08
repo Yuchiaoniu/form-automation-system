@@ -1,22 +1,29 @@
-﻿import os
+import os
 import sys
 import tempfile
+import uuid
 from datetime import datetime, timezone
 
 import bcrypt
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, send_file, session
 
 load_dotenv()
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-from db import get_forms, get_user, init_db, save_form
+from db import get_doc, get_docs, get_forms, get_user, init_db, save_doc, save_form
+from docx_builder import build_docx
 from docx_extractor import extract_text
 from forms_creator import create_form
 from gemini_analyzer import analyze_form
+from image_handler import analyze_image
+
+DOCX_DIR = os.path.join(os.path.dirname(__file__), "data", "docx")
+ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
+MIME_MAP = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.config["SESSION_COOKIE_SECURE"] = True
@@ -64,8 +71,9 @@ def me():
 def history():
     if not _user_id():
         return jsonify({"error": "未登入"}), 401
-    records = get_forms(_user_id())
-    return jsonify({"records": records})
+    forms = get_forms(_user_id())
+    docs = get_docs(_user_id())
+    return jsonify({"forms": forms, "docs": docs})
 
 
 @app.route("/analyze", methods=["POST"])
@@ -111,6 +119,67 @@ def analyze():
         })
     finally:
         os.unlink(tmp_path)
+
+
+@app.route("/convert-image", methods=["POST"])
+def convert_image():
+    if not _user_id():
+        return jsonify({"error": "未登入"}), 401
+
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "未收到檔案"}), 400
+
+    ext = os.path.splitext(file.filename.lower())[1]
+    if ext not in ALLOWED_IMAGE_EXTS:
+        return jsonify({"error": "僅支援 JPG、PNG 格式"}), 400
+
+    mime_type = MIME_MAP[ext]
+    original_filename = os.path.splitext(file.filename)[0]
+    image_bytes = file.read()
+
+    try:
+        table_json = analyze_image(image_bytes, mime_type)
+    except Exception as e:
+        return jsonify({"error": f"圖片分析失敗：{e}"}), 500
+
+    os.makedirs(DOCX_DIR, exist_ok=True)
+    docx_filename = f"{uuid.uuid4().hex}.docx"
+    docx_path = os.path.join(DOCX_DIR, docx_filename)
+
+    try:
+        build_docx(table_json, docx_path)
+    except Exception as e:
+        return jsonify({"error": f"文件建立失敗：{e}"}), 500
+
+    created_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    record_id = save_doc(_user_id(), original_filename, docx_path, created_at)
+
+    return jsonify({
+        "record_id": record_id,
+        "original_filename": original_filename,
+        "download_url": f"/download/{record_id}",
+        "created_at": created_at,
+    })
+
+
+@app.route("/download/<int:record_id>", methods=["GET"])
+def download(record_id):
+    if not _user_id():
+        return jsonify({"error": "未登入"}), 401
+
+    doc = get_doc(record_id)
+    if not doc:
+        return jsonify({"error": "找不到記錄"}), 404
+    if doc["user_id"] != _user_id():
+        return jsonify({"error": "無權限"}), 403
+
+    return send_file(
+        doc["docx_path"],
+        as_attachment=True,
+        download_name=f"{doc['original_filename']}.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 
 if __name__ == "__main__":
