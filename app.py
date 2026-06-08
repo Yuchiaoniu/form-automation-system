@@ -4,7 +4,7 @@ import sys
 import tempfile
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request, after_this_request
+from flask import Flask, jsonify, render_template, request
 
 load_dotenv()
 
@@ -14,27 +14,6 @@ from gemini_analyzer import analyze_form
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB 上限
-
-ALLOWED_ORIGINS = {
-    "https://yuchiaoniu.github.io",
-    "http://localhost:5000",
-    "http://127.0.0.1:5000",
-}
-
-
-@app.after_request
-def add_cors(response):
-    origin = request.headers.get("Origin", "")
-    if origin in ALLOWED_ORIGINS:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    return response
-
-
-@app.route("/analyze", methods=["OPTIONS"])
-def analyze_preflight():
-    return "", 204
 
 
 @app.route("/")
