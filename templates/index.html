@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>表單自動化系統 — 文件分析</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #222; padding: 2rem; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    p.sub { color: #666; margin-bottom: 2rem; font-size: 0.9rem; }
+
+    .upload-box {
+      background: #fff;
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.2s;
+    }
+    .upload-box:hover { border-color: #4a90d9; }
+    .upload-box input[type=file] { margin: 1rem 0; display: block; width: 100%; }
+    .upload-box button {
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.8rem;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .upload-box button:disabled { background: #aaa; cursor: default; }
+
+    #status { margin-bottom: 1rem; font-size: 0.9rem; color: #555; min-height: 1.2em; }
+    #status.error { color: #c0392b; }
+    #status.ok { color: #27ae60; }
+
+    .result-section { display: none; }
+    .result-section h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+
+    .warning { background: #fff3cd; border-left: 4px solid #f39c12; padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 2px; font-size: 0.875rem; }
+
+    #json-output {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1.2rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .copy-btn {
+      margin-top: 0.5rem;
+      background: transparent;
+      border: 1px solid #aaa;
+      padding: 0.3rem 0.9rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .copy-btn:hover { background: #eee; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>表單自動化系統</h1>
+  <p class="sub">上傳 .docx 表單文件，系統將透過 Gemini AI 分析欄位結構並輸出 JSON。</p>
+
+  <div class="upload-box">
+    <form id="upload-form">
+      <label for="file-input">選擇 Word 文件（.docx）</label>
+      <input type="file" id="file-input" accept=".docx" required>
+      <button type="submit" id="submit-btn">開始分析</button>
+    </form>
+  </div>
+
+  <div id="status"></div>
+
+  <div class="result-section" id="result-section">
+    <div class="warning" id="truncate-warning" style="display:none">
+      ⚠️ 文件內容過長，已截斷至前 8000 字元，分析結果可能不完整。
+    </div>
+    <h2>識別結果（JSON）</h2>
+    <pre id="json-output"></pre>
+    <button class="copy-btn" onclick="copyJson()">複製 JSON</button>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById("upload-form");
+  const statusEl = document.getElementById("status");
+  const resultSection = document.getElementById("result-section");
+  const jsonOutput = document.getElementById("json-output");
+  const submitBtn = document.getElementById("submit-btn");
+  const truncateWarning = document.getElementById("truncate-warning");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const file = document.getElementById("file-input").files[0];
+    if (!file) return;
+
+    submitBtn.disabled = true;
+    statusEl.className = "";
+    statusEl.textContent = "正在上傳並分析，請稍候…";
+    resultSection.style.display = "none";
+
+    const data = new FormData();
+    data.append("file", file);
+
+    try {
+      const resp = await fetch("/analyze", { method: "POST", body: data });
+      const json = await resp.json();
+
+      if (json.error) {
+        statusEl.className = "error";
+        statusEl.textContent = "錯誤：" + json.error;
+      } else {
+        statusEl.className = "ok";
+        statusEl.textContent = `分析完成，共識別 ${json.fields.length} 個欄位。`;
+        truncateWarning.style.display = json.truncated ? "block" : "none";
+        jsonOutput.textContent = JSON.stringify(json.fields, null, 2);
+        resultSection.style.display = "block";
+      }
+    } catch (err) {
+      statusEl.className = "error";
+      statusEl.textContent = "連線失敗：" + err.message;
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  function copyJson() {
+    navigator.clipboard.writeText(jsonOutput.textContent)
+      .then(() => alert("已複製到剪貼簿"));
+  }
+</script>
+</body>
+</html>
