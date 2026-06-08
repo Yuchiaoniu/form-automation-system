@@ -37,6 +37,25 @@
     #status.error { color: #c0392b; }
     #status.ok { color: #27ae60; }
 
+    /* 歷史清單 */
+    .history-section { margin-bottom: 2rem; }
+    .history-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.6rem;
+    }
+    .history-header h2 { font-size: 1rem; }
+    .clear-btn {
+      background: transparent; border: 1px solid #ccc;
+      padding: 0.25rem 0.7rem; border-radius: 4px;
+      font-size: 0.8rem; cursor: pointer; color: #666;
+    }
+    .clear-btn:hover { background: #fee; border-color: #c0392b; color: #c0392b; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; background: #fff; border-radius: 6px; overflow: hidden; }
+    .history-table th { background: #f0f0f0; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; }
+    .history-table td { padding: 0.5rem 0.75rem; border-top: 1px solid #eee; word-break: break-all; }
+    .history-table a { color: #2980b9; text-decoration: none; }
+    .history-table a:hover { text-decoration: underline; }
+
     .result-section { display: none; }
     .result-section h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
 
@@ -93,6 +112,25 @@
 
   <div id="status"></div>
 
+  <!-- 歷史清單 -->
+  <div class="history-section" id="history-section" style="display:none">
+    <div class="history-header">
+      <h2>已建立表單</h2>
+      <button class="clear-btn" onclick="clearHistory()">清除所有記錄</button>
+    </div>
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>檔案名稱</th>
+          <th>編輯連結</th>
+          <th>填寫連結</th>
+          <th>建立時間</th>
+        </tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+  </div>
+
   <div class="result-section" id="result-section">
     <div class="warning" id="truncate-warning" style="display:none">
       ⚠️ 文件內容過長，已截斷至前 8000 字元，分析結果可能不完整。
@@ -113,6 +151,7 @@
 
 <script>
   const API_BASE = "https://forest-carbon.duckdns.org/forms";
+  const HISTORY_KEY = "form_history";
 
   const form = document.getElementById("upload-form");
   const statusEl = document.getElementById("status");
@@ -121,12 +160,17 @@
   const submitBtn = document.getElementById("submit-btn");
   const truncateWarning = document.getElementById("truncate-warning");
   let lastFields = [];
+  let lastFileName = "";
+
+  // 頁面載入時渲染歷史
+  renderHistory();
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const file = document.getElementById("file-input").files[0];
     if (!file) return;
 
+    lastFileName = file.name.replace(/\.docx$/i, "");
     submitBtn.disabled = true;
     statusEl.className = "";
     statusEl.textContent = "正在上傳並分析，請稍候…";
@@ -183,7 +227,7 @@
       const resp = await fetch(`${API_BASE}/create-form`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: lastFields, title: "自動產生表單" }),
+        body: JSON.stringify({ fields: lastFields, title: lastFileName || "自動產生表單" }),
       });
       const json = await resp.json();
       if (json.error) {
@@ -194,6 +238,7 @@
         document.getElementById("edit-link").href = json.edit_url;
         document.getElementById("respond-link").href = json.respond_url;
         linksEl.style.display = "block";
+        saveHistory(lastFileName, json.edit_url, json.respond_url);
       }
     } catch (err) {
       createStatusEl.className = "error";
@@ -201,6 +246,48 @@
     } finally {
       btn.disabled = false;
     }
+  }
+
+  function saveHistory(fileName, editUrl, respondUrl) {
+    const history = getHistory();
+    history.unshift({
+      fileName,
+      editUrl,
+      respondUrl,
+      createdAt: new Date().toLocaleString("zh-TW")
+    });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    renderHistory();
+  }
+
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function renderHistory() {
+    const history = getHistory();
+    const section = document.getElementById("history-section");
+    const tbody = document.getElementById("history-body");
+    if (!history.length) { section.style.display = "none"; return; }
+    section.style.display = "block";
+    tbody.innerHTML = history.map(r => `
+      <tr>
+        <td>${escHtml(r.fileName)}</td>
+        <td><a href="${escHtml(r.editUrl)}" target="_blank">✏️ 編輯</a></td>
+        <td><a href="${escHtml(r.respondUrl)}" target="_blank">📋 填寫</a></td>
+        <td>${escHtml(r.createdAt)}</td>
+      </tr>`).join("");
+  }
+
+  function clearHistory() {
+    if (!confirm("確定要清除所有表單記錄嗎？")) return;
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 </script>
 </body>
